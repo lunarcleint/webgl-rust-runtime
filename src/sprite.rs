@@ -56,6 +56,7 @@ impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
     fn draw(&self, render: &render::RenderState) {
+        render::use_program(&render, &self.program);
         render::draw_triangles(&render, self.indices.len() as i32);
     }
 }
