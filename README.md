@@ -9,7 +9,7 @@ I'm still learning Rust and this is part of a bigger idea I have (why it's web b
 
 ## Build Instructions
 
-- Install [Rust](https://rust-lang.org/) and the [rustup](https://rustup.rs/) installer
+- Install [Rust](https://rust-lang.org/) with the [rustup](https://rustup.rs/) installer
 - Add the web assembly target: `rustup target add wasm32-unknown-unknown`
 - Install the wasm packer: `cargo install wasm-pack`
 - Run `wasm-pack build --target web` to build (exports to pkg/)
