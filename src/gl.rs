@@ -52,81 +52,6 @@ pub const BASE_FRAGMENT_SHADER: &str =
     }"
 ;
 
-pub const FUNNY_FRAGMENT_SHADER: &str = 
-    "#version 300 es
-    precision highp float;
-
-    in vec2 texture_coords;
-    uniform sampler2D texture_sampler;
-    out vec4 output_color;
-
-    void main() {
-        vec2 uv = texture_coords.xy;
-
-        uv.x += sin((uv.y*4.0)) * 0.02 * 3.0;
-        uv.y += cos((uv.x*4.0)) * 0.02 * 3.0;
-
-        output_color = texture(texture_sampler, uv);
-    }"
-;
-
-pub const BLOOM_FRAGMENT_SHADER: &str = 
-    "#version 300 es
-    precision highp float;
-
-    #define PI 3.1415926535897932384626433832795
-    #define TWO_PI (PI * 2.0)
-
-    #define brightness 2.
-    #define threshold .26
-    #define directions 360.0
-    #define quality 60.0
-    #define size 180.0
-
-    in vec2 texture_coords;
-    uniform sampler2D texture_sampler;
-    out vec4 output_color;
-
-    void main() {
-        vec2 uv = texture_coords.xy;
-
-        uv.x += sin((uv.y*4.0)) * 0.02 * 3.0;
-        uv.y += cos((uv.x*4.0)) * 0.02 * 3.0;
-
-        vec4 color = texture(texture_sampler, uv);
-        
-        if (brightness <= 0.0 || size <= 0.0) {
-            output_color = color;
-            return;
-        }
-
-        vec4 bloom = vec4(0.0);
-        float weightSum = 0.0;
-
-        vec4 highlight = max(color - threshold, 0.0);
-
-        for (float d = 0.0; d < TWO_PI; d += TWO_PI / directions) {
-            for (float i = 1.0; i <= float(quality); i++) {
-                float offset = (i / float(quality)) * size;
-                float x_offset = (sin(d) * offset) / 300.0;
-                float y_offset = (cos(d) * offset) / 300.0;
-                vec2 sampleUV = clamp(uv + vec2(x_offset, y_offset), vec2(0.0), vec2(1.0));
-
-                vec4 sampleColor = max(texture(texture_sampler, sampleUV) - threshold, 0.0);
-                float weight = exp(-2.0 * (i / float(quality)));
-                bloom += sampleColor * weight;
-                weightSum += weight;
-            }
-        }
-
-        if (weightSum > 0.0) {
-            bloom /= weightSum;
-        }
-
-        output_color = color + (bloom * brightness);
-    }"
-;
-
 pub fn load_texture_empty(context: &WebGl2RenderingContext) -> Result<WebGlTexture, JsValue> {
     let texture = context.create_texture().ok_or(JsValue::from_str("Unable to create texture"))?;
     context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
@@ -150,27 +75,6 @@ pub fn load_texture_image(context: &WebGl2RenderingContext, image: &HtmlImageEle
     let texture = context.create_texture().ok_or(JsValue::from_str("Unable to create texture"))?;
     context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
 
-    context.tex_parameteri(
-        WebGl2RenderingContext::TEXTURE_2D, 
-        WebGl2RenderingContext::TEXTURE_MIN_FILTER, 
-        WebGl2RenderingContext::LINEAR as i32
-    );
-    context.tex_parameteri(
-        WebGl2RenderingContext::TEXTURE_2D, 
-        WebGl2RenderingContext::TEXTURE_MAG_FILTER, 
-        WebGl2RenderingContext::LINEAR as i32
-    );
-    context.tex_parameteri(
-        WebGl2RenderingContext::TEXTURE_2D, 
-        WebGl2RenderingContext::TEXTURE_WRAP_S, 
-        WebGl2RenderingContext::CLAMP_TO_EDGE as i32
-    );
-    context.tex_parameteri(
-        WebGl2RenderingContext::TEXTURE_2D, 
-        WebGl2RenderingContext::TEXTURE_WRAP_T, 
-        WebGl2RenderingContext::CLAMP_TO_EDGE as i32
-    );
-
     context.tex_image_2d_with_u32_and_u32_and_html_image_element(
         WebGl2RenderingContext::TEXTURE_2D,
         BASE_LEVEL,
@@ -181,11 +85,11 @@ pub fn load_texture_image(context: &WebGl2RenderingContext, image: &HtmlImageEle
     )?;
 
     context.generate_mipmap(WebGl2RenderingContext::TEXTURE_2D);
-
+    
     return Ok(texture);
 }
 
-pub fn compile_shader(context: &WebGl2RenderingContext, shader_type: u32, source : &str) -> Result<WebGlShader, JsValue> {
+pub fn compile_shader(context: &WebGl2RenderingContext, shader_type: u32, source: &str) -> Result<WebGlShader, JsValue> {
     let shader  = context.create_shader(shader_type).ok_or(JsValue::from_str("Unable to create shader"))?;
     context.shader_source(&shader, source);
     context.compile_shader(&shader);
@@ -231,13 +135,13 @@ pub fn link_program_multiple(context: &WebGl2RenderingContext, shaders: &[&WebGl
 }
 
 pub fn create_buffer(context: &WebGl2RenderingContext, buffer_type: u32) -> Result<WebGlBuffer, JsValue> {
-    let buffer = context.create_buffer().ok_or(JsValue::from_str("Unable to create buffer"))?;
-    context.bind_buffer(buffer_type, Some(&buffer));
-    
+    let buffer: WebGlBuffer = context.create_buffer().ok_or(JsValue::from_str("Unable to create buffer"))?;
     return Ok(buffer);
 }
 
-pub fn upload_buffer_f32(context: &WebGl2RenderingContext, buffer_type: u32, data: &[f32]) {
+pub fn upload_buffer_f32(context: &WebGl2RenderingContext, buffer_type: u32, buffer: &WebGlBuffer, data: &[f32]) {
+    context.bind_buffer(buffer_type, Some(&buffer));
+
     unsafe {
         let js_data = Float32Array::view(&data);
 
@@ -250,7 +154,9 @@ pub fn upload_buffer_f32(context: &WebGl2RenderingContext, buffer_type: u32, dat
     }
 }
 
-pub fn upload_buffer_u16(context: &WebGl2RenderingContext, buffer_type: u32, data: &[u16]) {
+pub fn upload_buffer_u16(context: &WebGl2RenderingContext, buffer_type: u32, buffer: &WebGlBuffer, data: &[u16]) {
+    context.bind_buffer(buffer_type, Some(&buffer));
+
     unsafe {
         let js_data = Uint16Array::view(&data);
 
