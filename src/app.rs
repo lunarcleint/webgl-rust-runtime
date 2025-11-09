@@ -11,6 +11,8 @@ use crate::object::Object;
 use crate::render::{self, RenderState};
 use crate::{app, gl};
 
+pub const BASE_FRAMERATE: f32 = 60.0;
+
 pub struct AppState {
     pub window: Window,
     pub document: Document,
@@ -46,7 +48,7 @@ pub fn create_app() -> Result<AppState, JsValue> {
     let context = gl::query_gl_context(&canvas)?;
     let render = render::create_renderer(context)?;
 
-    const FRAMERATE: f32 = 60.0;
+    let framerate = BASE_FRAMERATE;
 
     let app_state = AppState {
         window,
@@ -55,7 +57,7 @@ pub fn create_app() -> Result<AppState, JsValue> {
 
         objects,
         render,
-        framerate: FRAMERATE
+        framerate
     };
 
     Ok(app_state)

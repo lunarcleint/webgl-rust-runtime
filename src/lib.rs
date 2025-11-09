@@ -13,7 +13,6 @@ mod debug;
 
 #[wasm_bindgen(start)]
 async fn start() -> Result<(), JsValue> {
-    /* Create app */
     let mut app = app::create_app()?;
     let render = &app.render;
 
