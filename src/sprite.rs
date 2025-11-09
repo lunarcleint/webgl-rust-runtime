@@ -15,39 +15,36 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    pub fn new(x: f32, y: f32, texture: WebGlTexture, render: &RenderState, program_option: Option<WebGlProgram>) -> Sprite {
+    pub fn new(x: f32, y: f32, texture: WebGlTexture, render: &RenderState, program: Option<WebGlProgram>) -> Sprite {
 
-        let program = match program_option {
-            Some(program) => program,
-            None => render::create_program(&render, None, None).unwrap()
-        };
+        let program = program.unwrap_or(render::create_program(render, None, None).unwrap());
 
-        render::use_program(&render, &program);
+        render::use_program(render, &program);
 
         let vertices = gl::BASE_QUAD_VERTS;
         let uvs = gl::BASE_QUAD_UVS;
         let indices = gl::BASE_QUAD_INDICES;
 
-        render::upload_vertices(&render, &vertices);
-        render::upload_uvs(&render, &uvs);
-        render::upload_indices(&render, &indices);
+        render::upload_vertices(render, &vertices);
+        render::upload_uvs(render, &uvs);
+        render::upload_indices(render, &indices);
 
         /* Attribute vert_texture_coords (vec2) and position (vec3) */
-        render::bind_vert_attribs(&render, &program);
+        render::bind_vert_attribs(render, &program);
 
         /* Uniform texture_sampler (sampler2D) */
-        render::bind_frag_uniforms(&render, &program, &texture);
+        render::bind_frag_uniforms(render, &program, &texture);
 
         Sprite {
-            x: x,
-            y: y,
+            x,
+            y,
 
             vertices: vertices.to_vec(),
             uvs: uvs.to_vec(),
             indices: indices.to_vec(),
 
-            texture: texture,
-            program: program
+            texture,
+            program
         }
     }
 }
@@ -56,7 +53,7 @@ impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
     fn draw(&self, render: &render::RenderState) {
-        render::use_program(&render, &self.program);
-        render::draw_triangles(&render, self.indices.len() as i32);
+        render::use_program(render, &self.program);
+        render::draw_triangles(render, self.indices.len() as i32);
     }
 }

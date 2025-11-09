@@ -68,7 +68,7 @@ pub fn load_texture_empty(context: &WebGl2RenderingContext) -> Result<WebGlTextu
         Some(&BASE_TEXTURE)
     )?;
 
-    return Ok(texture);
+    Ok(texture)
 }
 
 pub fn load_texture_image(context: &WebGl2RenderingContext, image: &HtmlImageElement) -> Result<WebGlTexture, JsValue> {
@@ -81,12 +81,29 @@ pub fn load_texture_image(context: &WebGl2RenderingContext, image: &HtmlImageEle
         WebGl2RenderingContext::RGBA as i32,
         WebGl2RenderingContext::RGBA,
         WebGl2RenderingContext::UNSIGNED_BYTE,
-        &image
+        image
     )?;
 
     context.generate_mipmap(WebGl2RenderingContext::TEXTURE_2D);
-    
-    return Ok(texture);
+
+    Ok(texture)
+}
+
+pub fn set_texture_filtering(context: &WebGl2RenderingContext, texture: &WebGlTexture, antialiasing: bool) {
+    context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
+
+    let filter = if (antialiasing) {WebGl2RenderingContext::LINEAR} else {WebGl2RenderingContext::NEAREST}; 
+    context.tex_parameteri(
+        WebGl2RenderingContext::TEXTURE_2D, 
+        WebGl2RenderingContext::TEXTURE_MIN_FILTER,
+        filter as i32
+    );
+
+    context.tex_parameteri(
+        WebGl2RenderingContext::TEXTURE_2D, 
+        WebGl2RenderingContext::TEXTURE_MAG_FILTER,
+        filter as i32
+    );
 }
 
 pub fn compile_shader(context: &WebGl2RenderingContext, shader_type: u32, source: &str) -> Result<WebGlShader, JsValue> {
@@ -100,7 +117,7 @@ pub fn compile_shader(context: &WebGl2RenderingContext, shader_type: u32, source
         return Err(JsValue::from_str(&error_log));
     }
 
-    return Ok(shader);
+    Ok(shader)
 }
 
 pub fn link_program(context: &WebGl2RenderingContext, vertex_shader: &WebGlShader, fragment_shader : &WebGlShader) -> Result<WebGlProgram, JsValue> {
@@ -115,7 +132,7 @@ pub fn link_program(context: &WebGl2RenderingContext, vertex_shader: &WebGlShade
         return Err(JsValue::from_str(&error_log));
     }
 
-    return Ok(program);
+    Ok(program)
 }
 
 pub fn link_program_multiple(context: &WebGl2RenderingContext, shaders: &[&WebGlShader]) -> Result<WebGlProgram, JsValue> {
@@ -131,19 +148,19 @@ pub fn link_program_multiple(context: &WebGl2RenderingContext, shaders: &[&WebGl
         return Err(JsValue::from_str(&error_log));
     }
 
-    return Ok(program);
+    Ok(program)
 }
 
 pub fn create_buffer(context: &WebGl2RenderingContext, buffer_type: u32) -> Result<WebGlBuffer, JsValue> {
     let buffer: WebGlBuffer = context.create_buffer().ok_or(JsValue::from_str("Unable to create buffer"))?;
-    return Ok(buffer);
+    Ok(buffer)
 }
 
 pub fn upload_buffer_f32(context: &WebGl2RenderingContext, buffer_type: u32, buffer: &WebGlBuffer, data: &[f32]) {
-    context.bind_buffer(buffer_type, Some(&buffer));
+    context.bind_buffer(buffer_type, Some(buffer));
 
     unsafe {
-        let js_data = Float32Array::view(&data);
+        let js_data = Float32Array::view(data);
 
         // Upload the vertex data into the ARRAY_BUFFER on the GPU
         context.buffer_data_with_array_buffer_view(
@@ -155,10 +172,10 @@ pub fn upload_buffer_f32(context: &WebGl2RenderingContext, buffer_type: u32, buf
 }
 
 pub fn upload_buffer_u16(context: &WebGl2RenderingContext, buffer_type: u32, buffer: &WebGlBuffer, data: &[u16]) {
-    context.bind_buffer(buffer_type, Some(&buffer));
+    context.bind_buffer(buffer_type, Some(buffer));
 
     unsafe {
-        let js_data = Uint16Array::view(&data);
+        let js_data = Uint16Array::view(data);
 
         // Upload the vertex data into the ARRAY_BUFFER on the GPU
         context.buffer_data_with_array_buffer_view(
@@ -173,12 +190,15 @@ pub fn create_vertex_array(context: &WebGl2RenderingContext) -> Result<WebGlVert
     let vertex_array = context.create_vertex_array().ok_or(JsValue::from_str("Unable to create vertex array"))?;
     context.bind_vertex_array(Some(&vertex_array));
 
-    return Ok(vertex_array);
+    Ok(vertex_array)
 }
 
 pub fn query_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGl2RenderingContext, String> {
-    let context_query = canvas.get_context("webgl2");
-    return match context_query {
+    let options = js_sys::Object::new();
+    js_sys::Reflect::set(&options, &JsValue::from_str("antialias"), &JsValue::from_bool(true)).expect("Unable to set context options");
+
+    let context_query = canvas.get_context_with_context_options("webgl2", &options);
+    match context_query {
         Ok(context_option) => {
             match context_option {
                 Some(context) => {
@@ -188,9 +208,9 @@ pub fn query_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGl2RenderingCon
                         Err(_) => Err(String::from("Unable to cast context into JS context"))
                     };
                 },
-                None => Err(String::from("Unable to get context"))
+                None => Err(String::from("Unable to get context (Browser does not support WebGL 2)"))
             }
         }
-        Err(_) => Err(String::from("Unable to get context"))
+        Err(_) => Err(String::from("Unable to get context (Browser does not support WebGL 2)"))
     }
 }

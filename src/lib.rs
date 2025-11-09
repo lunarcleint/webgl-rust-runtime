@@ -17,18 +17,12 @@ async fn start() -> Result<(), JsValue> {
     let mut app = app::create_app()?;
     let render = &app.render;
 
-    /* Load assets */
-
-    /* Create shader */
-    let program = render::create_program(&render, None, None)?;
-    render::use_program(&render, &program);
-
-    let sprite = LetsHaveALookCat::new(0.0, 0.0, &render).await;
+    let sprite = LetsHaveALookCat::new(0.0, 0.0, render).await;
     app.objects.push(Box::new(sprite));
 
     app::start_loop(app);
 
-    return Ok(());
+    Ok(())
 }
 
 pub struct LetsHaveALookCat {
@@ -40,13 +34,13 @@ pub struct LetsHaveALookCat {
 
 impl LetsHaveALookCat {
     pub async fn new(x: f32, y: f32, render: &RenderState) -> LetsHaveALookCat {
-        let program = render::create_program(&render, None, None).unwrap();
-
+        /* Load assets */
         let image = assets::load_image("assets/cat.png").await.unwrap();
         let texture = gl::load_texture_image(&render.context, &image).unwrap();
+        gl::set_texture_filtering(&render.context, &texture, true);
 
         LetsHaveALookCat {
-            sprite: Sprite::new(x, y, texture, &render, Some(program)),
+            sprite: Sprite::new(x, y, texture, render, None),
 
             speed: 1.0,
             timer: 0.0,

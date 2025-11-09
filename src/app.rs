@@ -29,7 +29,7 @@ impl Object for AppState {
     }
 
     fn draw(&self, render: &render::RenderState) {
-        render::clear_color(&render, 0.0, 0.0, 0.0, 0.0);
+        render::clear_color(render, 0.0, 0.0, 0.0, 0.0);
 
         for object in &self.objects {
             object.draw(&self.render);
@@ -49,16 +49,16 @@ pub fn create_app() -> Result<AppState, JsValue> {
     const FRAMERATE: f32 = 60.0;
 
     let app_state = AppState {
-        window: window,
-        document: document,
-        canvas: canvas,
+        window,
+        document,
+        canvas,
 
-        objects: objects,
-        render: render,
+        objects,
+        render,
         framerate: FRAMERATE
     };
 
-    return Ok(app_state);
+    Ok(app_state)
 }
 
 pub fn start_loop(mut state: AppState) {
@@ -97,7 +97,7 @@ pub fn query_canvas(document: &Document) -> Result<HtmlCanvasElement, String> {
     match canvas_query {
         Some(element) => {
             let js_cast = element.dyn_into::<web_sys::HtmlCanvasElement>();
-            return match js_cast {
+            match js_cast {
                 Ok(htmlcanvasitem) => Ok(htmlcanvasitem),
                 Err(_) => Err(String::from("Unable to cast canvas into JS canvas"))
             }
@@ -116,8 +116,8 @@ pub fn query_document(window: &Window) -> Result<Document, String> {
 
 pub fn query_window() -> Result<Window, String> {
     let window_query = web_sys::window();
-    return match window_query {
+    match window_query {
         Some(window) => Ok(window),
         None => Err(String::from("Unable to get web window"))
-    };
+    }
 }

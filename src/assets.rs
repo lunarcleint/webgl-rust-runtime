@@ -16,10 +16,10 @@ pub async fn load_image(path: &str) -> Result<HtmlImageElement, JsValue> {
         });
         image.set_onerror(Some(on_error_closure.dyn_ref().unwrap()));
 
-        image.set_src(&path);
+        image.set_src(path);
     });
 
     JsFuture::from(promise).await?;
 
-    return Ok(image);
+    Ok(image)
 }
