@@ -32,6 +32,12 @@ impl Sprite {
         render::upload_uvs(&render, &uvs);
         render::upload_indices(&render, &indices);
 
+        /* Attribute vert_texture_coords (vec2) and position (vec3) */
+        render::bind_vert_attribs(&render, &program);
+
+        /* Uniform texture_sampler (sampler2D) */
+        render::bind_frag_uniforms(&render, &program, &texture);
+
         Sprite {
             x: x,
             y: y,
@@ -50,17 +56,6 @@ impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
     fn draw(&self, render: &render::RenderState) {
-        render::upload_vertices(&render, &self.vertices);
-        render::upload_uvs(&render, &self.uvs);
-        render::upload_indices(&render, &self.indices);
-
-        /* Attribute vert_texture_coords (vec2) and position (vec3) */
-        render::bind_vert_attribs(&render, &self.program);
-
-        /* Uniform texture_sampler (sampler2D) */
-        render::bind_frag_uniforms(&render, &self.program, &self.texture);
-
-        /* Finally draw */
         render::draw_triangles(&render, self.indices.len() as i32);
     }
 }

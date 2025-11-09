@@ -163,20 +163,20 @@ pub struct LetsHaveALookCat {
     pub timer: f32,
     pub speed: f32,
 
-    pub time_uniform: WebGlUniformLocation,
-    pub bloom_uniform: WebGlUniformLocation
+    // pub time_uniform: WebGlUniformLocation,
+    // pub bloom_uniform: WebGlUniformLocation
 }
 
 impl LetsHaveALookCat {
     pub fn new(x: f32, y: f32, texture: WebGlTexture, render: &RenderState) -> LetsHaveALookCat {
-        let program = render::create_program(&render, Some(CAT_VERTEX_SHADER), Some(CAT_FRAGMENT_SHADER)).unwrap();
-        let time_uniform = &render.context.get_uniform_location(&program, "time").unwrap();
-        let bloom_uniform = &render.context.get_uniform_location(&program, "brightness").unwrap();
+        let program = render::create_program(&render, None, None).unwrap();
+        // let time_uniform = &render.context.get_uniform_location(&program, "time").unwrap();
+        // let bloom_uniform = &render.context.get_uniform_location(&program, "brightness").unwrap();
 
         LetsHaveALookCat {
             sprite: Sprite::new(x, y, texture, &render, Some(program)),
-            time_uniform: time_uniform.to_owned(),
-            bloom_uniform: bloom_uniform.to_owned(),
+            // time_uniform: time_uniform.to_owned(),
+            // bloom_uniform: bloom_uniform.to_owned(),
 
             speed: 1.0,
             timer: 0.0,
@@ -195,8 +195,8 @@ impl Object for LetsHaveALookCat {
     }
 
     fn draw(&self, render: &render::RenderState) {
-        render.context.uniform1f(Some(&self.time_uniform), self.timer);
-        render.context.uniform1f(Some(&self.bloom_uniform), (self.timer/10.0).sin()*2.0);
+        // render.context.uniform1f(Some(&self.time_uniform), self.timer);
+        // render.context.uniform1f(Some(&self.bloom_uniform), (self.timer/10.0).sin()*2.0);
         self.sprite.draw(render);
     }
 }
