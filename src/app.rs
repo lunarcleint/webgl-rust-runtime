@@ -62,7 +62,7 @@ pub fn create_app() -> Result<AppState, JsValue> {
 }
 
 pub fn start_loop(mut state: AppState) {
-    let window = query_window().expect("sdsd");
+    let window = query_window().expect("Unable to get web window");
     let window_clone = window.clone();
 
     let func = Rc::new(RefCell::new(None));
