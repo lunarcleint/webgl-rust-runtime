@@ -7,15 +7,25 @@ use crate::gl;
 
 pub struct RenderState {
     pub context: WebGl2RenderingContext,
-    pub vertex_array_object: WebGlVertexArrayObject,
 
     pub vertex_buffer: WebGlBuffer,
     pub uv_buffer: WebGlBuffer,
     pub index_buffer: WebGlBuffer,
 }
 
+pub struct DrawBuffers {
+    pub vertex_buffer: WebGlBuffer,
+    pub uv_buffer: WebGlBuffer,
+    pub index_buffer: WebGlBuffer,
+}
+
 pub fn create_renderer(context: WebGl2RenderingContext) -> Result<RenderState, JsValue> {
-    let vertex_array_object = gl::create_vertex_array(&context)?;
+    context.enable(WebGl2RenderingContext::BLEND);
+    context.blend_func(
+        WebGl2RenderingContext::SRC_ALPHA,
+        WebGl2RenderingContext::ONE_MINUS_SRC_ALPHA
+    );
+
 
     let vertex_buffer = gl::create_buffer(&context, WebGl2RenderingContext::ARRAY_BUFFER)?;
     let uv_buffer = gl::create_buffer(&context, WebGl2RenderingContext::ARRAY_BUFFER)?;
@@ -23,7 +33,6 @@ pub fn create_renderer(context: WebGl2RenderingContext) -> Result<RenderState, J
 
     let render_state = RenderState {
         context,
-        vertex_array_object,
 
         vertex_buffer,
         uv_buffer,
@@ -45,6 +54,11 @@ pub fn create_program(state: &RenderState, vertex_source: Option<&str>, fragment
 pub fn use_program(state: &RenderState, program: &WebGlProgram) {
     let context = &state.context;
     context.use_program(Some(program));
+}
+
+pub fn use_texture(state: &RenderState, texture: &WebGlTexture) {
+    let context = &state.context;
+    context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
 }
 
 pub fn upload_vertices(state: &RenderState, vertices: &[f32]) {
@@ -76,6 +90,9 @@ pub fn upload_indices(state: &RenderState, indices: &[u16]) {
 
 pub fn bind_vert_attribs(state: &RenderState, program: &WebGlProgram) {
     let context = &state.context;
+
+    // context.bind_vertex_array(Some(&state.vertex_array_object));
+
     context.bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, Some(&state.vertex_buffer));
     /* Uniform position (vec4) */
     let position_attrib = context.get_attrib_location(program, "position") as u32;
@@ -101,6 +118,9 @@ pub fn bind_vert_attribs(state: &RenderState, program: &WebGlProgram) {
         0,
         0
     );
+
+    context.bind_buffer(WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, Some(&state.index_buffer));
+
 }
 
 pub fn bind_frag_uniforms(state: &RenderState, program: &WebGlProgram, texture: &WebGlTexture) {

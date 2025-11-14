@@ -7,6 +7,7 @@ use js_sys::{Date};
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, HtmlCanvasElement, Window};
 
+use crate::camera::Camera;
 use crate::object::Object;
 use crate::render::{self, RenderState};
 use crate::{app, gl};
@@ -19,21 +20,23 @@ pub struct AppState {
     pub canvas: HtmlCanvasElement,
 
     pub objects: Vec<Box<dyn Object>>,
-    pub render: RenderState,
+    pub cameras: Vec<Rc<RefCell<Camera>>>,
+    pub render: Rc<RenderState>,
     pub framerate: f32,
 }
 
 impl Object for AppState {
     fn update(&mut self, delta_time: f32) {
+        
         for object in &mut self.objects {
             object.update(delta_time);
         }
     }
 
-    fn draw(&self, render: &render::RenderState) {
+    fn draw(&mut self, render: &render::RenderState) {
         render::clear_color(render, 0.0, 0.0, 0.0, 0.0);
 
-        for object in &self.objects {
+        for object in &mut self.objects {
             object.draw(&self.render);
         }
     }
@@ -45,8 +48,11 @@ pub fn create_app() -> Result<AppState, JsValue> {
     let canvas = query_canvas(&document)?;
 
     let objects = Vec::new();
+    let cameras = Vec::new();
     let context = gl::query_gl_context(&canvas)?;
-    let render = render::create_renderer(context)?;
+    let state = render::create_renderer(context)?;
+
+    let render = Rc::new(state);
 
     let framerate = BASE_FRAMERATE;
 
@@ -56,6 +62,7 @@ pub fn create_app() -> Result<AppState, JsValue> {
         canvas,
 
         objects,
+        cameras,
         render,
         framerate
     };
@@ -73,6 +80,8 @@ pub fn start_loop(mut state: AppState) {
     let frame_time = (1.0 / &state.framerate) as f64;
     let mut start_time = Date::now();
 
+    let render_clone = state.render.clone();
+
     *callback.borrow_mut() = Some(Closure::new(move || {
         let current_time = Date::now();
         let delta_time = (current_time - start_time) / 1000.0;
@@ -81,7 +90,7 @@ pub fn start_loop(mut state: AppState) {
             start_time = current_time;
             
             state.update(delta_time as f32);
-            state.draw(&state.render);
+            state.draw(&render_clone);
         }
 
         schedule_next_frame(&window_clone, func.borrow().as_ref().unwrap());
