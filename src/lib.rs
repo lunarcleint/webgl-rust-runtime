@@ -7,11 +7,10 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 use crate::camera::Camera;
-use crate::{render::Renderer, sprite::Sprite};
+use crate::sprite::Sprite;
 use crate::object::Object;
 
 mod app;
-mod gl;
 mod render;
 mod assets;
 mod object;
@@ -23,29 +22,21 @@ mod camera;
 #[wasm_bindgen(start)]
 async fn start() -> Result<(), JsValue> {
     let mut app = App::new()?;
-    let render = &app.render;
 
-    let camera = Camera {
-        width: app.canvas.width() as f32,
-        height: app.canvas.height() as f32,
-        zoom: 1.0,
-        rotation: 35.0,
-
-        scrollx: 0.0,
-        scrolly: 0.0,
-    };
+    let mut camera = Camera::new(app.canvas.width() as f32, app.canvas.height() as f32);
+    camera.rotation = 35.0;
 
     let camera_pointer = Rc::new(RefCell::new(camera));
     app.cameras.push(camera_pointer.clone());
 
-    let sprite1 = LetsHaveALookCat::new(100.0, 20.0, camera_pointer.clone(), render).await;
+    let sprite1 = LetsHaveALookCat::new(100.0, 20.0, camera_pointer.clone()).await;
     app.objects.push(Box::new(sprite1));
 
-    let sprite = LetsHaveALookCat::new(400.0, 0.0, camera_pointer.clone(), render).await;
+    let sprite = LetsHaveALookCat::new(400.0, 0.0, camera_pointer.clone()).await;
     app.objects.push(Box::new(sprite));
 
-    for i in 0..6 {
-        let banna = Banna::new(i, camera_pointer.clone(), render).await;
+    for i in 0..600 {
+        let banna = Banna::new(i, camera_pointer.clone()).await;
         app.objects.push(Box::new(banna));
     }
 
@@ -62,13 +53,8 @@ pub struct LetsHaveALookCat {
 }
 
 impl LetsHaveALookCat {
-    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, render: &Renderer) -> LetsHaveALookCat {
-        /* Load assets */
-        let image = assets::Assets::load_image("assets/cat.png").await.unwrap();
-
-        let sprite = Sprite::new(x, y, camera, Some(image), render, None);
-        // sprite.scalex = 0.4;
-        // sprite.scaley = 0.4;
+    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>) -> LetsHaveALookCat {
+        let sprite = Sprite::new(x, y, camera, "assets/cat.png", None).await;
 
         LetsHaveALookCat {
             sprite,
@@ -91,7 +77,7 @@ impl Object for LetsHaveALookCat {
         self.sprite.rotation = self.timer.sin() * 5.0;
     }
 
-    fn draw(&mut self, render: &render::Renderer) {
+    fn draw(&self, render: &render::Renderer) {
         self.sprite.draw(render);
     }
 }
@@ -104,11 +90,8 @@ pub struct Banna {
 }
 
 impl Banna {
-    pub async fn new(i: i32, camera: Rc<RefCell<Camera>>, render: &Renderer) -> Banna {
-        /* Load assets */
-        let image = assets::Assets::load_image("assets/banna.png").await.unwrap();
-
-        let mut sprite = Sprite::new(0.0, 0.0, camera, Some(image), render, None);
+    pub async fn new(i: i32, camera: Rc<RefCell<Camera>>) -> Banna {
+        let mut sprite = Sprite::new(0.0, 0.0, camera, "assets/banna.png", None).await;
         sprite.scalex = 0.3;
         sprite.scaley = 0.3;
 
@@ -134,7 +117,7 @@ impl Object for Banna {
         self.sprite.y = 360.0 * ((self.timer - (self.i as f32 * 0.36)) * 3.0).cos();
     }
 
-    fn draw(&mut self, render: &render::Renderer) {
+    fn draw(&self, render: &render::Renderer) {
         self.sprite.draw(render);
     }
 }

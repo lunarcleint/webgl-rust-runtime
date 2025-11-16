@@ -1,9 +1,9 @@
 #![allow(unused)]
-use crate::log;
+use crate::{assets::{self, Image}, log, render::{BASE_QUAD_INDICES, BASE_QUAD_UVS, BASE_QUAD_VERTS}};
 use std::{cell::RefCell, rc::Rc};
 
 use web_sys::{HtmlImageElement, WebGlProgram, WebGlTexture};
-use crate::{camera::{self, Camera}, console_log, gl, object::Object, render::{self, Renderer}};
+use crate::{camera::{self, Camera}, console_log, object::Object, render::{self, Renderer}};
 
 pub struct Sprite {
     pub x: f32,
@@ -18,51 +18,36 @@ pub struct Sprite {
     pub rotation: f32,
 
     pub camera: Rc<RefCell<Camera>>,
-
-    vertices: Vec<f32>,
-    uvs: Vec<f32>,
-    indices: Vec<u16>,
-
-    texture: WebGlTexture,
-    program: WebGlProgram
+    pub image: Option<Rc<RefCell<Image>>>,
+    pub shader: WebGlProgram,
 }
 
 impl Sprite {
-    pub fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: Option<Rc<RefCell<HtmlImageElement>>>, render: &Renderer, program: Option<WebGlProgram>) -> Sprite {
-        let program = program.unwrap_or(render::create_program(render, None, None).unwrap());
-        let html_image:Option<HtmlImageElement> = image.as_ref().map(|html_image_pointer| html_image_pointer.borrow().clone());
+    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: &str, shader: Option<WebGlProgram>) -> Sprite {
+        /* Load shader or use default shader */
+        let program = shader.unwrap_or_else(|| { render::with_renderer(|renderer| renderer.base_program.as_ref().unwrap().as_ref().clone()) });
 
-        let texture = match (html_image) {
-            Some(ref image) => gl::load_texture_image(&render.context, image).unwrap(),
-            None => gl::load_texture_empty(&render.context).unwrap()
-        };
-        gl::set_texture_filtering(&render.context, &texture, true);
+        /* Load image from assets */
+        let image_ref: Option<Rc<RefCell<Image>>> = assets::Assets::load_image(image).await;
 
-        let vertices = gl::BASE_QUAD_VERTS;
-        let uvs = gl::BASE_QUAD_UVS;
-        let indices = gl::BASE_QUAD_INDICES;
+        let image_binding = image_ref.clone();
+        let image_pointer = &image_binding.as_ref().unwrap().borrow();
 
-        render::use_program(render, &program);
+        let html_image = &image_pointer.html_image;
+        let webl_gl_texture = &image_pointer.webl_gl_texture;
+        render::with_renderer(|renderer| {
+            renderer.use_program(&program);
 
-        render::upload_vertices(render, &vertices);
-        render::upload_uvs(render, &uvs);
-        render::upload_indices(render, &indices);
-
-        render::bind_vert_attribs(render, &program);
-        render::bind_frag_uniforms(render, &program, &texture);
+            renderer.bind_vert_attribs(&renderer.quads_buffer, &program);
+            renderer.bind_frag_uniforms(&program, webl_gl_texture);
+        });
 
         Sprite {
             x,
             y,
 
-            width: match (html_image) {
-                Some(ref image) => image.width() as f32,
-                None => gl::BASE_TEXTURE_WIDTH as f32
-            },
-            height: match (html_image) {
-                Some(ref image) => image.height() as f32,
-                None => gl::BASE_TEXTURE_HEIGHT as f32
-            },
+            width: html_image.width() as f32,
+            height: html_image.height() as f32,
 
             scalex: 1.0,
             scaley: 1.0,
@@ -70,13 +55,8 @@ impl Sprite {
             rotation: 0.0,
 
             camera,
-
-            vertices: vertices.to_vec(),
-            uvs: uvs.to_vec(),
-            indices: indices.to_vec(),
-
-            texture,
-            program
+            image: image_ref,
+            shader: program,
         }
     }
 }
@@ -84,21 +64,22 @@ impl Sprite {
 impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
-    fn draw(&mut self, render: &render::Renderer) {
-        render::use_program(render, &self.program);
-        render::use_texture(render, &self.texture);
+    fn draw(&self, renderer: &render::Renderer) {
+        let texture = match self.image {
+            Some(ref image) => &image.borrow().webl_gl_texture,
+            None => &render::with_renderer(|renderer| renderer.base_texture.as_ref().unwrap().as_ref().clone())
+        };
+
+        renderer.use_program(&self.shader);
+        renderer.use_texture(&texture);
         
         let camera = self.camera.borrow();
-        let new_vertices = camera::transform_tris(self, &camera);
+        let vertices = camera.transform_tris(self);
 
-        if new_vertices != self.vertices {
-            self.vertices = new_vertices;
-        }
+        renderer.quads_buffer.upload_vertices(&renderer.context, &vertices);
+        renderer.quads_buffer.upload_uvs(&renderer.context, &BASE_QUAD_UVS);
+        renderer.quads_buffer.upload_indices(&renderer.context, &BASE_QUAD_INDICES);
 
-        render::upload_vertices(render, &self.vertices);
-        render::upload_uvs(render, &self.uvs);
-        render::upload_indices(render, &self.indices);
-
-        render::draw_triangles(render, self.indices.len() as i32);
+        renderer.draw_triangles(BASE_QUAD_INDICES.len() as i32);
     }
 }
