@@ -65,16 +65,16 @@ pub struct DrawBuffers {
 
 impl DrawBuffers {
     pub fn new(context: &WebGl2RenderingContext) -> DrawBuffers {
-        let vertex_buffer = DrawBuffers::create_buffer(&context, WebGl2RenderingContext::ARRAY_BUFFER).unwrap();
-        let uv_buffer = DrawBuffers::create_buffer(&context, WebGl2RenderingContext::ARRAY_BUFFER).unwrap();
-        let index_buffer = DrawBuffers::create_buffer(&context, WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER).unwrap();
+        let vertex_buffer = DrawBuffers::create_buffer(context, WebGl2RenderingContext::ARRAY_BUFFER).unwrap();
+        let uv_buffer = DrawBuffers::create_buffer(context, WebGl2RenderingContext::ARRAY_BUFFER).unwrap();
+        let index_buffer = DrawBuffers::create_buffer(context, WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER).unwrap();
 
         DrawBuffers { vertex_buffer, uv_buffer, index_buffer }
     }
 
     pub fn upload_vertices(&self, context: &WebGl2RenderingContext, vertices: &[f32]) {
         DrawBuffers::upload_buffer_f32(
-            &context,
+            context,
             WebGl2RenderingContext::ARRAY_BUFFER, 
             &self.vertex_buffer,
             vertices
@@ -83,7 +83,7 @@ impl DrawBuffers {
 
     pub fn upload_uvs(&self, context: &WebGl2RenderingContext, uvs: &[f32]) {
         DrawBuffers::upload_buffer_f32(
-            &context,
+            context,
             WebGl2RenderingContext::ARRAY_BUFFER, 
             &self.uv_buffer,
             uvs
@@ -92,7 +92,7 @@ impl DrawBuffers {
 
     pub fn upload_indices(&self, context: &WebGl2RenderingContext, indices: &[u16]) {
         DrawBuffers::upload_buffer_u16(
-            &context,
+            context,
             WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, 
             &self.index_buffer,
             indices
@@ -140,7 +140,7 @@ pub struct Renderer {
 }
 
 thread_local! {
-    pub static RENDERER: RefCell<Option<Rc<Renderer>>> = RefCell::new(None);
+    pub static RENDERER: RefCell<Option<Rc<Renderer>>> = const { RefCell::new(None) };
 }
 
 impl Renderer {

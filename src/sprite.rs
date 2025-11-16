@@ -71,7 +71,7 @@ impl Object for Sprite {
         };
 
         renderer.use_program(&self.shader);
-        renderer.use_texture(&texture);
+        renderer.use_texture(texture);
         
         let camera = self.camera.borrow();
         let vertices = camera.transform_tris(self);

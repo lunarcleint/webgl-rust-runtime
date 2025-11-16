@@ -42,10 +42,7 @@ impl Assets {
 
     async fn check_cache_image(path: &str) -> Option<Rc<RefCell<Image>>> {
         ASSETS.with(|assets| {
-            match assets.borrow().image_cache.get(path) {
-                Some(image_ref) => Some(image_ref.clone()),
-                None => None
-            }
+            assets.borrow().image_cache.get(path).cloned()
         })
     }
 
