@@ -30,10 +30,7 @@ pub struct Sprite {
 impl Sprite {
     pub fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: Option<Rc<RefCell<HtmlImageElement>>>, render: &Renderer, program: Option<WebGlProgram>) -> Sprite {
         let program = program.unwrap_or(render::create_program(render, None, None).unwrap());
-        let html_image:Option<HtmlImageElement> = match image {
-            Some(ref html_image_pointer) => Some(html_image_pointer.borrow().clone()),
-            None => None 
-        };
+        let html_image:Option<HtmlImageElement> = image.as_ref().map(|html_image_pointer| html_image_pointer.borrow().clone());
 
         let texture = match (html_image) {
             Some(ref image) => gl::load_texture_image(&render.context, image).unwrap(),

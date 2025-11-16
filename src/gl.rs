@@ -203,10 +203,10 @@ pub fn query_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGl2RenderingCon
             match context_option {
                 Some(context) => {
                     let js_cast = context.dyn_into::<WebGl2RenderingContext>();
-                    return match js_cast {
+                    match js_cast {
                         Ok(webgl2context) => Ok(webgl2context),
                         Err(_) => Err(String::from("Unable to cast context into JS context"))
-                    };
+                    }
                 },
                 None => Err(String::from("Unable to get context (Browser does not support WebGL 2)"))
             }
