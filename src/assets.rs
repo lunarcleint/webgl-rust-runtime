@@ -36,7 +36,7 @@ impl Assets {
 
         match Assets::check_cache_image(path).await {
             Some(image_pointer) => Some(image_pointer.clone()),
-            None => Some(Assets::cache_image(path).await.unwrap()),
+            None => Assets::cache_image(path).await.ok(),
         }
     }
 

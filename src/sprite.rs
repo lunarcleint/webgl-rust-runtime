@@ -47,26 +47,37 @@ impl Sprite {
         });
 
         /* Load image from assets */
-        let image_ref: Option<Rc<RefCell<Image>>> = assets::Assets::load_image(image).await;
+        let image_ref = assets::Assets::load_image(image).await;
 
         let image_binding = image_ref.clone();
-        let image_pointer = &image_binding.as_ref().unwrap().borrow();
+        let image_pointer = &image_binding.as_ref();
 
-        let html_image = &image_pointer.html_image;
-        let webl_gl_texture = &image_pointer.webl_gl_texture;
-        render::with_renderer(|renderer| {
-            renderer.use_program(&program);
+        let mut width = 0.0;
+        let mut height = 0.0;
 
-            renderer.bind_vert_attribs(&renderer.quads_buffer, &program);
-            renderer.bind_frag_uniforms(&program, webl_gl_texture);
-        });
+        if let Some(pointer) = image_pointer {
+            let borrowed = pointer.borrow();
+
+            let html_image = &borrowed.html_image;
+            let webl_gl_texture = &borrowed.webl_gl_texture;
+
+            width = html_image.width() as f32;
+            height = html_image.height() as f32;
+
+            render::with_renderer(|renderer| {
+                renderer.use_program(&program);
+
+                renderer.bind_vert_attribs(&renderer.quads_buffer, &program);
+                renderer.bind_frag_uniforms(&program, webl_gl_texture);
+            });
+        }
 
         Sprite {
             x,
             y,
 
-            width: html_image.width() as f32,
-            height: html_image.height() as f32,
+            width,
+            height,
 
             scalex: 1.0,
             scaley: 1.0,
@@ -84,29 +95,26 @@ impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
     fn draw(&self, renderer: &render::Renderer) {
-        let texture = match self.image {
-            Some(ref image) => &image.borrow().webl_gl_texture,
-            None => &render::with_renderer(|renderer| {
-                renderer.base_texture.as_ref().unwrap().as_ref().clone()
-            }),
-        };
+        if let Some(ref image) = self.image {
+            let texture = &image.borrow().webl_gl_texture;
 
-        renderer.use_program(&self.shader);
-        renderer.use_texture(texture);
+            renderer.use_program(&self.shader);
+            renderer.use_texture(texture);
 
-        let camera = self.camera.borrow();
-        let vertices = camera.transform_tris(self);
+            let camera = self.camera.borrow();
+            let vertices = camera.transform_tris(self);
 
-        renderer
-            .quads_buffer
-            .upload_vertices(&renderer.context, &vertices);
-        renderer
-            .quads_buffer
-            .upload_uvs(&renderer.context, &BASE_QUAD_UVS);
-        renderer
-            .quads_buffer
-            .upload_indices(&renderer.context, &BASE_QUAD_INDICES);
+            renderer
+                .quads_buffer
+                .upload_vertices(&renderer.context, &vertices);
+            renderer
+                .quads_buffer
+                .upload_uvs(&renderer.context, &BASE_QUAD_UVS);
+            renderer
+                .quads_buffer
+                .upload_indices(&renderer.context, &BASE_QUAD_INDICES);
 
-        renderer.draw_triangles(BASE_QUAD_INDICES.len() as i32);
+            renderer.draw_triangles(BASE_QUAD_INDICES.len() as i32);
+        }
     }
 }

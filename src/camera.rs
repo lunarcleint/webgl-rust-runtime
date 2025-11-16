@@ -2,6 +2,7 @@
 
 use crate::{app, render, sprite::Sprite};
 
+#[derive(PartialEq)]
 pub struct Camera {
     pub width: f32,
     pub height: f32,

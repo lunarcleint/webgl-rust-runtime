@@ -12,10 +12,6 @@ use web_sys::{
 
 use crate::render;
 
-pub const BASE_TEXTURE: [u8; 4] = [255, 255, 255, 255];
-pub const BASE_TEXTURE_WIDTH: i32 = 1;
-pub const BASE_TEXTURE_HEIGHT: i32 = 1;
-pub const BASE_TEXTURE_BORDER: i32 = 0;
 pub const BASE_LEVEL: i32 = 0;
 
 pub const BASE_QUAD_VERTS: [f32; 12] = [
@@ -158,7 +154,6 @@ pub struct Renderer {
     pub quads_buffer: DrawBuffers,
 
     pub base_program: Option<Rc<WebGlProgram>>,
-    pub base_texture: Option<Rc<WebGlTexture>>,
 }
 
 thread_local! {
@@ -179,14 +174,10 @@ impl Renderer {
             context,
             quads_buffer,
             base_program: None,
-            base_texture: None,
         };
 
         let base_program = Rc::new(renderer.create_base_program());
-        let base_texture = Rc::new(renderer.load_texture_empty());
-
         renderer.base_program = Some(base_program);
-        renderer.base_texture = Some(base_texture);
 
         renderer
     }
@@ -281,29 +272,6 @@ impl Renderer {
         }
 
         Some(shader)
-    }
-
-    pub fn load_texture_empty(&self) -> WebGlTexture {
-        let texture = self.context.create_texture().unwrap();
-        self.context
-            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
-
-        self.context
-            .tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
-                WebGl2RenderingContext::TEXTURE_2D,
-                BASE_LEVEL,
-                WebGl2RenderingContext::RGBA as i32,
-                BASE_TEXTURE_WIDTH,
-                BASE_TEXTURE_HEIGHT,
-                BASE_TEXTURE_BORDER,
-                WebGl2RenderingContext::RGBA,
-                WebGl2RenderingContext::UNSIGNED_BYTE,
-                Some(&BASE_TEXTURE),
-            );
-
-        // self.context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
-
-        texture
     }
 
     pub fn load_texture_image(&self, image: &HtmlImageElement) -> WebGlTexture {
