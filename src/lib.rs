@@ -1,11 +1,13 @@
+use crate::app::App;
 use crate::debug::log;
+
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use wasm_bindgen::prelude::*;
 
 use crate::camera::Camera;
-use crate::{render::RenderState, sprite::Sprite};
+use crate::{render::Renderer, sprite::Sprite};
 use crate::object::Object;
 
 mod app;
@@ -20,7 +22,7 @@ mod camera;
 
 #[wasm_bindgen(start)]
 async fn start() -> Result<(), JsValue> {
-    let mut app = app::create_app()?;
+    let mut app = App::new()?;
     let render = &app.render;
 
     let camera = Camera {
@@ -42,12 +44,12 @@ async fn start() -> Result<(), JsValue> {
     let sprite = LetsHaveALookCat::new(400.0, 0.0, camera_pointer.clone(), render).await;
     app.objects.push(Box::new(sprite));
 
-    for i in 0..600 {
+    for i in 0..6 {
         let banna = Banna::new(i, camera_pointer.clone(), render).await;
         app.objects.push(Box::new(banna));
     }
 
-    app::start_loop(app);
+    app.start_main_loop();
 
     Ok(())
 }
@@ -60,9 +62,9 @@ pub struct LetsHaveALookCat {
 }
 
 impl LetsHaveALookCat {
-    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, render: &RenderState) -> LetsHaveALookCat {
+    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, render: &Renderer) -> LetsHaveALookCat {
         /* Load assets */
-        let image = assets::load_image("assets/cat.png").await.unwrap();
+        let image = assets::Assets::load_image("assets/cat.png").await.unwrap();
 
         let sprite = Sprite::new(x, y, camera, Some(image), render, None);
         // sprite.scalex = 0.4;
@@ -89,7 +91,7 @@ impl Object for LetsHaveALookCat {
         self.sprite.rotation = self.timer.sin() * 5.0;
     }
 
-    fn draw(&mut self, render: &render::RenderState) {
+    fn draw(&mut self, render: &render::Renderer) {
         self.sprite.draw(render);
     }
 }
@@ -102,9 +104,9 @@ pub struct Banna {
 }
 
 impl Banna {
-    pub async fn new(i: i32, camera: Rc<RefCell<Camera>>, render: &RenderState) -> Banna {
+    pub async fn new(i: i32, camera: Rc<RefCell<Camera>>, render: &Renderer) -> Banna {
         /* Load assets */
-        let image = assets::load_image("assets/banna.png").await.unwrap();
+        let image = assets::Assets::load_image("assets/banna.png").await.unwrap();
 
         let mut sprite = Sprite::new(0.0, 0.0, camera, Some(image), render, None);
         sprite.scalex = 0.3;
@@ -132,7 +134,7 @@ impl Object for Banna {
         self.sprite.y = 360.0 * ((self.timer - (self.i as f32 * 0.36)) * 3.0).cos();
     }
 
-    fn draw(&mut self, render: &render::RenderState) {
+    fn draw(&mut self, render: &render::Renderer) {
         self.sprite.draw(render);
     }
 }

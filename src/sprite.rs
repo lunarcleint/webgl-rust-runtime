@@ -3,7 +3,7 @@ use crate::log;
 use std::{cell::RefCell, rc::Rc};
 
 use web_sys::{HtmlImageElement, WebGlProgram, WebGlTexture};
-use crate::{camera::{self, Camera}, console_log, gl, object::Object, render::{self, RenderState}};
+use crate::{camera::{self, Camera}, console_log, gl, object::Object, render::{self, Renderer}};
 
 pub struct Sprite {
     pub x: f32,
@@ -28,10 +28,15 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    pub fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: Option<HtmlImageElement>, render: &RenderState, program: Option<WebGlProgram>) -> Sprite {
+    pub fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: Option<Rc<RefCell<HtmlImageElement>>>, render: &Renderer, program: Option<WebGlProgram>) -> Sprite {
         let program = program.unwrap_or(render::create_program(render, None, None).unwrap());
-        let texture = match (image) {
-            Some(ref html_image) => gl::load_texture_image(&render.context, &html_image).unwrap(),
+        let html_image:Option<HtmlImageElement> = match image {
+            Some(ref html_image_pointer) => Some(html_image_pointer.borrow().clone()),
+            None => None 
+        };
+
+        let texture = match (html_image) {
+            Some(ref image) => gl::load_texture_image(&render.context, image).unwrap(),
             None => gl::load_texture_empty(&render.context).unwrap()
         };
         gl::set_texture_filtering(&render.context, &texture, true);
@@ -53,12 +58,12 @@ impl Sprite {
             x,
             y,
 
-            width: match (image) {
-                Some(ref html_image) => html_image.width() as f32,
+            width: match (html_image) {
+                Some(ref image) => image.width() as f32,
                 None => gl::BASE_TEXTURE_WIDTH as f32
             },
-            height: match (image) {
-                Some(ref html_image) => html_image.height() as f32,
+            height: match (html_image) {
+                Some(ref image) => image.height() as f32,
                 None => gl::BASE_TEXTURE_HEIGHT as f32
             },
 
@@ -82,7 +87,7 @@ impl Sprite {
 impl Object for Sprite {
     fn update(&mut self, _delta_time: f32) {}
 
-    fn draw(&mut self, render: &render::RenderState) {
+    fn draw(&mut self, render: &render::Renderer) {
         render::use_program(render, &self.program);
         render::use_texture(render, &self.texture);
         

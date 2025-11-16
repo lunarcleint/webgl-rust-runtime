@@ -4,8 +4,7 @@ use wasm_bindgen::JsValue;
 use web_sys::{WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlTexture, WebGlVertexArrayObject};
 
 use crate::gl;
-
-pub struct RenderState {
+pub struct Renderer {
     pub context: WebGl2RenderingContext,
 
     pub vertex_buffer: WebGlBuffer,
@@ -19,7 +18,7 @@ pub struct DrawBuffers {
     pub index_buffer: WebGlBuffer,
 }
 
-pub fn create_renderer(context: WebGl2RenderingContext) -> Result<RenderState, JsValue> {
+pub fn create_renderer(context: WebGl2RenderingContext) -> Result<Renderer, JsValue> {
     context.enable(WebGl2RenderingContext::BLEND);
     context.blend_func(
         WebGl2RenderingContext::SRC_ALPHA,
@@ -31,7 +30,7 @@ pub fn create_renderer(context: WebGl2RenderingContext) -> Result<RenderState, J
     let uv_buffer = gl::create_buffer(&context, WebGl2RenderingContext::ARRAY_BUFFER)?;
     let index_buffer = gl::create_buffer(&context, WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER)?;
 
-    let render_state = RenderState {
+    let render_state = Renderer {
         context,
 
         vertex_buffer,
@@ -42,7 +41,7 @@ pub fn create_renderer(context: WebGl2RenderingContext) -> Result<RenderState, J
     Ok(render_state)
 }
 
-pub fn create_program(state: &RenderState, vertex_source: Option<&str>, fragment_source : Option<&str>) -> Result<WebGlProgram, JsValue> {
+pub fn create_program(state: &Renderer, vertex_source: Option<&str>, fragment_source : Option<&str>) -> Result<WebGlProgram, JsValue> {
     let context = &state.context;
     let vertex_shader = gl::compile_shader(context, WebGl2RenderingContext::VERTEX_SHADER, vertex_source.unwrap_or(gl::BASE_VERTEX_SHADER))?;
     let fragment_shader = gl::compile_shader(context, WebGl2RenderingContext::FRAGMENT_SHADER, fragment_source.unwrap_or(gl::BASE_FRAGMENT_SHADER))?;
@@ -51,17 +50,17 @@ pub fn create_program(state: &RenderState, vertex_source: Option<&str>, fragment
     Ok(program)
 }
 
-pub fn use_program(state: &RenderState, program: &WebGlProgram) {
+pub fn use_program(state: &Renderer, program: &WebGlProgram) {
     let context = &state.context;
     context.use_program(Some(program));
 }
 
-pub fn use_texture(state: &RenderState, texture: &WebGlTexture) {
+pub fn use_texture(state: &Renderer, texture: &WebGlTexture) {
     let context = &state.context;
     context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
 }
 
-pub fn upload_vertices(state: &RenderState, vertices: &[f32]) {
+pub fn upload_vertices(state: &Renderer, vertices: &[f32]) {
     gl::upload_buffer_f32(
         &state.context, 
         WebGl2RenderingContext::ARRAY_BUFFER, 
@@ -70,7 +69,7 @@ pub fn upload_vertices(state: &RenderState, vertices: &[f32]) {
     );
 }
 
-pub fn upload_uvs(state: &RenderState, uvs: &[f32]) {
+pub fn upload_uvs(state: &Renderer, uvs: &[f32]) {
     gl::upload_buffer_f32(
         &state.context, 
         WebGl2RenderingContext::ARRAY_BUFFER, 
@@ -79,7 +78,7 @@ pub fn upload_uvs(state: &RenderState, uvs: &[f32]) {
     );
 }
 
-pub fn upload_indices(state: &RenderState, indices: &[u16]) {
+pub fn upload_indices(state: &Renderer, indices: &[u16]) {
     gl::upload_buffer_u16(
         &state.context, 
         WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER, 
@@ -88,7 +87,7 @@ pub fn upload_indices(state: &RenderState, indices: &[u16]) {
     );
 }
 
-pub fn bind_vert_attribs(state: &RenderState, program: &WebGlProgram) {
+pub fn bind_vert_attribs(state: &Renderer, program: &WebGlProgram) {
     let context = &state.context;
 
     // context.bind_vertex_array(Some(&state.vertex_array_object));
@@ -123,7 +122,7 @@ pub fn bind_vert_attribs(state: &RenderState, program: &WebGlProgram) {
 
 }
 
-pub fn bind_frag_uniforms(state: &RenderState, program: &WebGlProgram, texture: &WebGlTexture) {
+pub fn bind_frag_uniforms(state: &Renderer, program: &WebGlProgram, texture: &WebGlTexture) {
     let context = &state.context;
     context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
 
@@ -131,13 +130,13 @@ pub fn bind_frag_uniforms(state: &RenderState, program: &WebGlProgram, texture: 
     context.uniform1i(Some(&texture_coords_uniform), 0);
 }
 
-pub fn clear_color(state: &RenderState, red: f32, green: f32, blue: f32, alpha: f32) {
+pub fn clear_color(state: &Renderer, red: f32, green: f32, blue: f32, alpha: f32) {
     let context = &state.context;
     context.clear_color(red, green, blue, alpha);
     context.clear(WebGl2RenderingContext::COLOR_BUFFER_BIT);
 }
 
-pub fn draw_triangles(state: &RenderState, count: i32) {
+pub fn draw_triangles(state: &Renderer, count: i32) {
     let context = &state.context;
 
     context.draw_elements_with_i32(
