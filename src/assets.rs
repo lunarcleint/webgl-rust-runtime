@@ -7,13 +7,13 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::HtmlImageElement;
 use web_sys::WebGlTexture;
 
-use crate::log;
 use crate::console_log;
+use crate::log;
 use crate::render;
 
 pub struct Image {
     pub html_image: HtmlImageElement,
-    pub webl_gl_texture: WebGlTexture
+    pub webl_gl_texture: WebGlTexture,
 }
 
 pub struct Assets {
@@ -36,14 +36,12 @@ impl Assets {
 
         match Assets::check_cache_image(path).await {
             Some(image_pointer) => Some(image_pointer.clone()),
-            None => Some(Assets::cache_image(path).await.unwrap())
+            None => Some(Assets::cache_image(path).await.unwrap()),
         }
     }
 
     async fn check_cache_image(path: &str) -> Option<Rc<RefCell<Image>>> {
-        ASSETS.with(|assets| {
-            assets.borrow().image_cache.get(path).cloned()
-        })
+        ASSETS.with(|assets| assets.borrow().image_cache.get(path).cloned())
     }
 
     pub async fn cache_image(path: &str) -> Result<Rc<RefCell<Image>>, JsValue> {
@@ -101,8 +99,11 @@ impl Assets {
             let renderer_borrow = binding.as_ref().unwrap();
             renderer_borrow.load_texture_image(&image)
         });
-        
-        let texture = Image { html_image: image, webl_gl_texture };
+
+        let texture = Image {
+            html_image: image,
+            webl_gl_texture,
+        };
         Rc::new(RefCell::new(texture))
     }
 }

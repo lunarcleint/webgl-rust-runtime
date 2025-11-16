@@ -5,7 +5,7 @@ use crate::log;
 use std::cell::RefCell;
 use std::rc::Rc;
 
-use js_sys::{Date};
+use js_sys::Date;
 use wasm_bindgen::prelude::*;
 use web_sys::{Document, HtmlCanvasElement, WebGl2RenderingContext, Window};
 
@@ -48,7 +48,7 @@ impl App {
             objects: Vec::new(),
             cameras: Vec::new(),
             renderer: renderer.clone(),
-            framerate: BASE_FRAMERATE
+            framerate: BASE_FRAMERATE,
         };
 
         Ok(app)
@@ -70,7 +70,7 @@ impl App {
 
             if (delta_time > frame_time) {
                 start_time = current_time;
-                
+
                 self.update(delta_time as f32);
                 self.draw(&self.renderer);
             }
@@ -82,28 +82,37 @@ impl App {
     }
 
     fn schedule_next_frame(window: &Window, callback: &Closure<dyn FnMut()>) {
-        window.request_animation_frame(callback.as_ref().unchecked_ref()).expect("Unable to register request_animation_frame");
+        window
+            .request_animation_frame(callback.as_ref().unchecked_ref())
+            .expect("Unable to register request_animation_frame");
     }
 
     fn query_gl_context(canvas: &HtmlCanvasElement) -> Result<WebGl2RenderingContext, String> {
         let options = js_sys::Object::new();
-        js_sys::Reflect::set(&options, &JsValue::from_str("antialias"), &JsValue::from_bool(true)).expect("Unable to set context options");
+        js_sys::Reflect::set(
+            &options,
+            &JsValue::from_str("antialias"),
+            &JsValue::from_bool(true),
+        )
+        .expect("Unable to set context options");
 
         let context_query = canvas.get_context_with_context_options("webgl2", &options);
         match context_query {
-            Ok(context_option) => {
-                match context_option {
-                    Some(context) => {
-                        let js_cast = context.dyn_into::<WebGl2RenderingContext>();
-                        match js_cast {
-                            Ok(webgl2context) => Ok(webgl2context),
-                            Err(_) => Err(String::from("Unable to cast context into JS context"))
-                        }
-                    },
-                    None => Err(String::from("Unable to get context (Browser does not support WebGL 2)"))
+            Ok(context_option) => match context_option {
+                Some(context) => {
+                    let js_cast = context.dyn_into::<WebGl2RenderingContext>();
+                    match js_cast {
+                        Ok(webgl2context) => Ok(webgl2context),
+                        Err(_) => Err(String::from("Unable to cast context into JS context")),
+                    }
                 }
-            }
-            Err(_) => Err(String::from("Unable to get context (Browser does not support WebGL 2)"))
+                None => Err(String::from(
+                    "Unable to get context (Browser does not support WebGL 2)",
+                )),
+            },
+            Err(_) => Err(String::from(
+                "Unable to get context (Browser does not support WebGL 2)",
+            )),
         }
     }
 
@@ -114,10 +123,10 @@ impl App {
                 let js_cast = element.dyn_into::<web_sys::HtmlCanvasElement>();
                 match js_cast {
                     Ok(htmlcanvasitem) => Ok(htmlcanvasitem),
-                    Err(_) => Err(String::from("Unable to cast canvas into JS canvas"))
+                    Err(_) => Err(String::from("Unable to cast canvas into JS canvas")),
                 }
-            },
-            None => Err(String::from("Unable to find canvas"))
+            }
+            None => Err(String::from("Unable to find canvas")),
         }
     }
 
@@ -125,7 +134,7 @@ impl App {
         let document_query = window.document();
         match document_query {
             Some(document) => Ok(document),
-            None => Err(String::from("Unable to get web document"))
+            None => Err(String::from("Unable to get web document")),
         }
     }
 
@@ -133,7 +142,7 @@ impl App {
         let window_query = web_sys::window();
         match window_query {
             Some(window) => Ok(window),
-            None => Err(String::from("Unable to get web window"))
+            None => Err(String::from("Unable to get web window")),
         }
     }
 }

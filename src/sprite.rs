@@ -1,9 +1,18 @@
 #![allow(unused)]
-use crate::{assets::{self, Image}, log, render::{BASE_QUAD_INDICES, BASE_QUAD_UVS, BASE_QUAD_VERTS}};
+use crate::{
+    assets::{self, Image},
+    log,
+    render::{BASE_QUAD_INDICES, BASE_QUAD_UVS, BASE_QUAD_VERTS},
+};
 use std::{cell::RefCell, rc::Rc};
 
+use crate::{
+    camera::{self, Camera},
+    console_log,
+    object::Object,
+    render::{self, Renderer},
+};
 use web_sys::{HtmlImageElement, WebGlProgram, WebGlTexture};
-use crate::{camera::{self, Camera}, console_log, object::Object, render::{self, Renderer}};
 
 pub struct Sprite {
     pub x: f32,
@@ -23,9 +32,19 @@ pub struct Sprite {
 }
 
 impl Sprite {
-    pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>, image: &str, shader: Option<WebGlProgram>) -> Sprite {
+    pub async fn new(
+        x: f32,
+        y: f32,
+        camera: Rc<RefCell<Camera>>,
+        image: &str,
+        shader: Option<WebGlProgram>,
+    ) -> Sprite {
         /* Load shader or use default shader */
-        let program = shader.unwrap_or_else(|| { render::with_renderer(|renderer| renderer.base_program.as_ref().unwrap().as_ref().clone()) });
+        let program = shader.unwrap_or_else(|| {
+            render::with_renderer(|renderer| {
+                renderer.base_program.as_ref().unwrap().as_ref().clone()
+            })
+        });
 
         /* Load image from assets */
         let image_ref: Option<Rc<RefCell<Image>>> = assets::Assets::load_image(image).await;
@@ -67,18 +86,26 @@ impl Object for Sprite {
     fn draw(&self, renderer: &render::Renderer) {
         let texture = match self.image {
             Some(ref image) => &image.borrow().webl_gl_texture,
-            None => &render::with_renderer(|renderer| renderer.base_texture.as_ref().unwrap().as_ref().clone())
+            None => &render::with_renderer(|renderer| {
+                renderer.base_texture.as_ref().unwrap().as_ref().clone()
+            }),
         };
 
         renderer.use_program(&self.shader);
         renderer.use_texture(texture);
-        
+
         let camera = self.camera.borrow();
         let vertices = camera.transform_tris(self);
 
-        renderer.quads_buffer.upload_vertices(&renderer.context, &vertices);
-        renderer.quads_buffer.upload_uvs(&renderer.context, &BASE_QUAD_UVS);
-        renderer.quads_buffer.upload_indices(&renderer.context, &BASE_QUAD_INDICES);
+        renderer
+            .quads_buffer
+            .upload_vertices(&renderer.context, &vertices);
+        renderer
+            .quads_buffer
+            .upload_uvs(&renderer.context, &BASE_QUAD_UVS);
+        renderer
+            .quads_buffer
+            .upload_indices(&renderer.context, &BASE_QUAD_INDICES);
 
         renderer.draw_triangles(BASE_QUAD_INDICES.len() as i32);
     }

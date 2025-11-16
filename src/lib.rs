@@ -7,13 +7,13 @@ use std::rc::Rc;
 use wasm_bindgen::prelude::*;
 
 use crate::camera::Camera;
-use crate::sprite::Sprite;
 use crate::object::Object;
+use crate::sprite::Sprite;
 
 mod app;
-mod render;
 mod assets;
 mod object;
+mod render;
 mod sprite;
 #[macro_use]
 mod debug;
@@ -64,8 +64,12 @@ impl LetsHaveALookCat {
         }
     }
 
-    pub fn sprite_mut(&mut self) -> &mut Sprite { &mut self.sprite }
-    pub fn sprite(&self) -> &Sprite { &self.sprite }
+    pub fn sprite_mut(&mut self) -> &mut Sprite {
+        &mut self.sprite
+    }
+    pub fn sprite(&self) -> &Sprite {
+        &self.sprite
+    }
 }
 
 impl Object for LetsHaveALookCat {
@@ -102,8 +106,12 @@ impl Banna {
         }
     }
 
-    pub fn sprite_mut(&mut self) -> &mut Sprite { &mut self.sprite }
-    pub fn sprite(&self) -> &Sprite { &self.sprite }
+    pub fn sprite_mut(&mut self) -> &mut Sprite {
+        &mut self.sprite
+    }
+    pub fn sprite(&self) -> &Sprite {
+        &self.sprite
+    }
 }
 
 impl Object for Banna {

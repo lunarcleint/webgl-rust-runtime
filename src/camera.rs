@@ -16,7 +16,14 @@ pub const DEG_TO_RADIANS: f32 = (std::f64::consts::PI / 180.0) as f32;
 
 impl Camera {
     pub fn new(width: f32, height: f32) -> Camera {
-        Camera { width, height, zoom: 1.0, rotation: 0.0, scrollx: 0.0, scrolly: 0.0 }
+        Camera {
+            width,
+            height,
+            zoom: 1.0,
+            rotation: 0.0,
+            scrollx: 0.0,
+            scrolly: 0.0,
+        }
     }
 
     pub fn transform_tris(&self, sprite: &Sprite) -> Vec<f32> {
@@ -29,7 +36,7 @@ impl Camera {
             /* Sprite transformations */
             x *= sprite.width;
             y *= sprite.height;
-            
+
             x *= sprite.scalex;
             y *= sprite.scaley;
 
@@ -65,7 +72,7 @@ impl Camera {
 
             x /= self.width;
             y /= self.height;
-            
+
             vertices[i] = x;
             vertices[i + 1] = y;
         }
