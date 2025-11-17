@@ -1,6 +1,7 @@
 #![allow(unused)]
 use crate::{
     assets::{self, Image},
+    camera::DrawCall,
     log,
     render::{BASE_QUAD_INDICES, BASE_QUAD_UVS, BASE_QUAD_VERTS},
 };
@@ -39,14 +40,12 @@ impl Sprite {
         image: &str,
         shader: Option<WebGlProgram>,
     ) -> Sprite {
-        /* Load shader or use default shader */
         let program = shader.unwrap_or_else(|| {
             render::with_renderer(|renderer| {
                 renderer.base_program.as_ref().unwrap().as_ref().clone()
             })
         });
 
-        /* Load image from assets */
         let image_ref = assets::Assets::load_image(image).await;
 
         let image_binding = image_ref.clone();
@@ -65,6 +64,8 @@ impl Sprite {
             height = html_image.height() as f32;
 
             render::with_renderer(|renderer| {
+                renderer.set_texture_filtering(webl_gl_texture, true);
+
                 renderer.use_program(&program);
 
                 renderer.bind_vert_attribs(&renderer.quads_buffer, &program);
@@ -96,25 +97,30 @@ impl Object for Sprite {
 
     fn draw(&self, renderer: &render::Renderer) {
         if let Some(ref image) = self.image {
+            let mut camera = self.camera.borrow_mut();
+            let vertices = camera.transform_tris(self);
+            let top = camera.draws.last_mut();
+
             let texture = &image.borrow().webl_gl_texture;
 
-            renderer.use_program(&self.shader);
-            renderer.use_texture(texture);
+            /* Batch draws that use the same texture and program */
+            if let Some(draw) = top {
+                if draw.program == self.shader && draw.texture == *texture {
+                    draw.vertices.append(&mut vertices.clone());
 
-            let camera = self.camera.borrow();
-            let vertices = camera.transform_tris(self);
+                    draw.count += 1;
+                    return;
+                }
+            }
 
-            renderer
-                .quads_buffer
-                .upload_vertices(&renderer.context, &vertices);
-            renderer
-                .quads_buffer
-                .upload_uvs(&renderer.context, &BASE_QUAD_UVS);
-            renderer
-                .quads_buffer
-                .upload_indices(&renderer.context, &BASE_QUAD_INDICES);
+            let draw_call = DrawCall {
+                texture: texture.clone(),
+                program: self.shader.clone(),
+                vertices,
+                count: 1,
+            };
 
-            renderer.draw_triangles(BASE_QUAD_INDICES.len() as i32);
+            camera.draws.push(draw_call);
         }
     }
 }

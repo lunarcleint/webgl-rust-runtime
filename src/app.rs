@@ -1,6 +1,6 @@
 #![allow(unused)]
 
-use crate::log;
+use crate::{camera, log};
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -155,10 +155,20 @@ impl Object for App {
     }
 
     fn draw(&self, renderer: &render::Renderer) {
-        renderer.clear_color(0.0, 0.0, 0.0, 0.0);
-
         for object in &self.objects {
             object.draw(&self.renderer);
+        }
+
+        renderer.clear_color(0.0, 0.0, 0.0, 0.0);
+
+        for camera_ref in &self.cameras {
+            let camera = camera_ref.borrow();
+            camera.draw(&self.renderer);
+        }
+
+        for camera_ref in &self.cameras {
+            let mut camera_mut = camera_ref.borrow_mut();
+            camera_mut.clear_draws();
         }
     }
 }

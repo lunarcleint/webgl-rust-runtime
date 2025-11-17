@@ -11,6 +11,7 @@ use crate::console_log;
 use crate::log;
 use crate::render;
 
+#[derive(PartialEq)]
 pub struct Image {
     pub html_image: HtmlImageElement,
     pub webl_gl_texture: WebGlTexture,

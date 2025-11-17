@@ -34,7 +34,7 @@ async fn start() -> Result<(), JsValue> {
     let sprite = LetsHaveALookCat::new(400.0, 0.0, camera_pointer.clone()).await;
     app.objects.push(Box::new(sprite));
 
-    for i in 0..200 {
+    for i in 0..10000 {
         let banna = Banna::new(i, camera_pointer.clone()).await;
         app.objects.push(Box::new(banna));
     }
@@ -53,7 +53,7 @@ pub struct LetsHaveALookCat {
 
 impl LetsHaveALookCat {
     pub async fn new(x: f32, y: f32, camera: Rc<RefCell<Camera>>) -> LetsHaveALookCat {
-        let sprite = Sprite::new(x, y, camera, "assets/catw.png", None).await;
+        let sprite = Sprite::new(x, y, camera, "assets/cat.png", None).await;
 
         LetsHaveALookCat {
             sprite,

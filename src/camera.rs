@@ -1,8 +1,19 @@
 #![allow(unused)]
 
-use crate::{app, render, sprite::Sprite};
+use crate::log;
+use std::{cell::RefCell, rc::Rc};
 
-#[derive(PartialEq)]
+use web_sys::{WebGlProgram, WebGlTexture};
+
+use crate::{
+    app,
+    assets::Image,
+    console_log,
+    object::Object,
+    render::{self, BASE_QUAD_INDICES, BASE_QUAD_UVS},
+    sprite::Sprite,
+};
+
 pub struct Camera {
     pub width: f32,
     pub height: f32,
@@ -11,6 +22,16 @@ pub struct Camera {
 
     pub scrollx: f32,
     pub scrolly: f32,
+
+    pub draws: Vec<DrawCall>,
+}
+
+pub struct DrawCall {
+    pub texture: WebGlTexture,
+    pub program: WebGlProgram,
+
+    pub vertices: Vec<f32>,
+    pub count: usize,
 }
 
 pub const DEG_TO_RADIANS: f32 = (std::f64::consts::PI / 180.0) as f32;
@@ -24,6 +45,7 @@ impl Camera {
             rotation: 0.0,
             scrollx: 0.0,
             scrolly: 0.0,
+            draws: Vec::new(),
         }
     }
 
@@ -79,5 +101,44 @@ impl Camera {
         }
 
         vertices.to_vec()
+    }
+
+    pub fn clear_draws(&mut self) {
+        self.draws.clear();
+    }
+}
+
+impl Object for Camera {
+    fn update(&mut self, delta_time: f32) {}
+
+    fn draw(&self, renderer: &render::Renderer) {
+        for draw in &self.draws {
+            renderer.use_program(&draw.program);
+            renderer.use_texture(&draw.texture);
+
+            renderer
+                .quads_buffer
+                .upload_vertices(&renderer.context, &draw.vertices);
+
+            let mut uvs = Vec::with_capacity(BASE_QUAD_UVS.len() * draw.count);
+            for _ in 0..draw.count {
+                uvs.extend_from_slice(&BASE_QUAD_UVS);
+            }
+            renderer.quads_buffer.upload_uvs(&renderer.context, &uvs);
+
+            let mut indices = Vec::with_capacity(BASE_QUAD_INDICES.len() * draw.count);
+
+            for quad in 0..draw.count {
+                let base = (quad * 4) as u16; // 4 vertices per quad
+                for &idx in BASE_QUAD_INDICES.iter() {
+                    indices.push(idx + base);
+                }
+            }
+            renderer
+                .quads_buffer
+                .upload_indices(&renderer.context, &indices);
+
+            renderer.draw_triangles(indices.len() as i32);
+        }
     }
 }
