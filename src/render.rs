@@ -6,8 +6,8 @@ use std::{cell::RefCell, rc::Rc};
 use js_sys::{Float32Array, Uint16Array};
 use wasm_bindgen::JsValue;
 use web_sys::{
-    HtmlImageElement, WebGl2RenderingContext, WebGlBuffer, WebGlProgram, WebGlShader, WebGlTexture,
-    WebGlVertexArrayObject,
+    HtmlImageElement, WebGl2RenderingContext, WebGlBuffer, WebGlFramebuffer, WebGlProgram,
+    WebGlShader, WebGlTexture, WebGlVertexArrayObject,
 };
 
 use crate::render;
@@ -38,7 +38,7 @@ pub const BASE_VERTEX_SHADER: &str = "#version 300 es
     out vec2 texture_coords;
 
     void main() {
-        texture_coords = vec2(vert_texture_coords.x, 1.0 - vert_texture_coords.y);
+        texture_coords = vec2(vert_texture_coords.x, vert_texture_coords.y);
         gl_Position = vec4(position, 1.0);
     }";
 pub const BASE_FRAGMENT_SHADER: &str = "#version 300 es
@@ -128,6 +128,8 @@ impl DrawBuffers {
                 WebGl2RenderingContext::STATIC_DRAW,
             );
         }
+
+        context.bind_buffer(buffer_type, None);
     }
 
     fn upload_buffer_u16(
@@ -146,12 +148,70 @@ impl DrawBuffers {
                 WebGl2RenderingContext::STATIC_DRAW,
             );
         }
+
+        context.bind_buffer(buffer_type, None);
+    }
+}
+
+pub struct PostProcessTarget {
+    pub frame_buffer: WebGlFramebuffer,
+    pub texture: WebGlTexture,
+}
+
+impl PostProcessTarget {
+    pub fn new(context: &WebGl2RenderingContext, width: i32, height: i32) -> PostProcessTarget {
+        let frame_buffer = context.create_framebuffer().unwrap();
+        context.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, Some(&frame_buffer));
+
+        let texture = context.create_texture().unwrap();
+        context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
+        context
+            .tex_image_2d_with_i32_and_i32_and_i32_and_format_and_type_and_opt_u8_array(
+                WebGl2RenderingContext::TEXTURE_2D,
+                0,
+                WebGl2RenderingContext::RGBA as i32,
+                width,
+                height,
+                0,
+                WebGl2RenderingContext::RGBA,
+                WebGl2RenderingContext::UNSIGNED_BYTE,
+                None,
+            )
+            .unwrap();
+
+        context.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MIN_FILTER,
+            WebGl2RenderingContext::LINEAR as i32,
+        );
+        context.tex_parameteri(
+            WebGl2RenderingContext::TEXTURE_2D,
+            WebGl2RenderingContext::TEXTURE_MAG_FILTER,
+            WebGl2RenderingContext::LINEAR as i32,
+        );
+
+        context.framebuffer_texture_2d(
+            WebGl2RenderingContext::FRAMEBUFFER,
+            WebGl2RenderingContext::COLOR_ATTACHMENT0,
+            WebGl2RenderingContext::TEXTURE_2D,
+            Some(&texture),
+            BASE_LEVEL,
+        );
+
+        context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
+        context.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
+
+        PostProcessTarget {
+            frame_buffer,
+            texture,
+        }
     }
 }
 
 pub struct Renderer {
     pub context: WebGl2RenderingContext,
     pub quads_buffer: DrawBuffers,
+    pub post_process: PostProcessTarget,
 
     pub base_program: Option<Rc<WebGlProgram>>,
 }
@@ -161,7 +221,7 @@ thread_local! {
 }
 
 impl Renderer {
-    pub fn new(context: WebGl2RenderingContext) -> Renderer {
+    pub fn new(context: WebGl2RenderingContext, width: i32, height: i32) -> Renderer {
         context.enable(WebGl2RenderingContext::BLEND);
         context.blend_func(
             WebGl2RenderingContext::SRC_ALPHA,
@@ -169,10 +229,12 @@ impl Renderer {
         );
 
         let quads_buffer = DrawBuffers::new(&context);
+        let post_process = PostProcessTarget::new(&context, width, height);
 
         let mut renderer = Renderer {
             context,
             quads_buffer,
+            post_process,
             base_program: None,
         };
 
@@ -290,9 +352,7 @@ impl Renderer {
             );
 
         self.context
-            .generate_mipmap(WebGl2RenderingContext::TEXTURE_2D);
-
-        // self.context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
+            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
 
         texture
     }
@@ -318,16 +378,16 @@ impl Renderer {
             filter as i32,
         );
 
-        // self.context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
+        self.context
+            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
     }
 
     pub fn bind_vert_attribs(&self, buffers: &DrawBuffers, program: &WebGlProgram) {
-        // context.bind_vertex_array(Some(&state.vertex_array_object));
-
         self.context.bind_buffer(
             WebGl2RenderingContext::ARRAY_BUFFER,
             Some(&buffers.vertex_buffer),
         );
+
         /* Uniform position (vec4) */
         let position_attrib = self.context.get_attrib_location(program, "position") as u32;
         self.context.enable_vertex_attrib_array(position_attrib);
@@ -344,6 +404,7 @@ impl Renderer {
             WebGl2RenderingContext::ARRAY_BUFFER,
             Some(&buffers.uv_buffer),
         );
+
         /* Uniform position (vec4) */
         let texture_coords_attrib =
             self.context
@@ -359,13 +420,13 @@ impl Renderer {
             0,
         );
 
-        self.context.bind_buffer(
-            WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
-            Some(&buffers.index_buffer),
-        );
+        self.context
+            .bind_buffer(WebGl2RenderingContext::ARRAY_BUFFER, None);
     }
 
     pub fn bind_frag_uniforms(&self, program: &WebGlProgram, texture: &WebGlTexture) {
+        self.context
+            .active_texture(WebGl2RenderingContext::TEXTURE0);
         self.context
             .bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(texture));
 
@@ -374,6 +435,9 @@ impl Renderer {
             .get_uniform_location(program, "texture_sampler")
             .unwrap();
         self.context.uniform1i(Some(&texture_coords_uniform), 0);
+
+        self.context
+            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
     }
 
     pub fn use_program(&self, program: &WebGlProgram) {
@@ -386,12 +450,21 @@ impl Renderer {
     }
 
     pub fn draw_triangles(&self, count: i32) {
+        self.context.bind_buffer(
+            WebGl2RenderingContext::ELEMENT_ARRAY_BUFFER,
+            Some(&self.quads_buffer.index_buffer),
+        );
+
         self.context.draw_elements_with_i32(
             WebGl2RenderingContext::TRIANGLES,
             count,
             WebGl2RenderingContext::UNSIGNED_SHORT,
             0,
         );
+
+        self.context.use_program(None);
+        self.context
+            .bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
     }
 
     pub fn clear_color(&self, red: f32, green: f32, blue: f32, alpha: f32) {

@@ -15,7 +15,6 @@ use crate::render::{self, Renderer};
 use crate::{app, console_log};
 
 pub const BASE_FRAMERATE: f32 = 240.0;
-
 pub struct App {
     pub window: Window,
     pub document: Document,
@@ -34,7 +33,11 @@ impl App {
         let canvas = App::query_canvas(&document)?;
 
         let context = App::query_gl_context(&canvas)?;
-        let renderer = Rc::new(Renderer::new(context));
+        let renderer = Rc::new(Renderer::new(
+            context,
+            canvas.width() as i32,
+            canvas.height() as i32,
+        ));
 
         render::RENDERER.with(|renderer_mut| {
             *renderer_mut.borrow_mut() = Some(renderer.clone());
