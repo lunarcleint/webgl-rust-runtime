@@ -118,7 +118,7 @@ impl Object for Camera {
         if let Some(program) = &self.shader {
             renderer.context.bind_framebuffer(
                 WebGl2RenderingContext::FRAMEBUFFER,
-                Some(&renderer.post_process.frame_buffer),
+                Some(&renderer.post_process.frame_buffer_store),
             );
 
             renderer.clear_color(0.0, 0.0, 0.0, 0.0);
@@ -154,10 +154,37 @@ impl Object for Camera {
         }
 
         /* Draw postproccess buffer */
+
         if let Some(program) = &self.shader {
+            /* MSAA */
+
+            renderer.context.bind_framebuffer(
+                WebGl2RenderingContext::READ_FRAMEBUFFER,
+                Some(&renderer.post_process.frame_buffer_store),
+            );
+            renderer.context.bind_framebuffer(
+                WebGl2RenderingContext::DRAW_FRAMEBUFFER,
+                Some(&renderer.post_process.frame_buffer_draw),
+            );
+
+            renderer.context.blit_framebuffer(
+                0,
+                0,
+                self.width as i32,
+                self.height as i32,
+                0,
+                0,
+                self.width as i32,
+                self.height as i32,
+                WebGl2RenderingContext::COLOR_BUFFER_BIT,
+                WebGl2RenderingContext::NEAREST,
+            );
+
             renderer
                 .context
                 .bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
+
+            /* Render camera texture to screen */
 
             renderer.use_program(program);
             renderer.use_texture(&renderer.post_process.texture);

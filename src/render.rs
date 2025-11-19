@@ -1,13 +1,13 @@
 #![allow(unused)]
 
-use crate::log;
+use crate::{console_log, log};
 use std::{cell::RefCell, rc::Rc};
 
 use js_sys::{Float32Array, Uint16Array};
 use wasm_bindgen::JsValue;
 use web_sys::{
     HtmlImageElement, WebGl2RenderingContext, WebGlBuffer, WebGlFramebuffer, WebGlProgram,
-    WebGlShader, WebGlTexture, WebGlVertexArrayObject,
+    WebGlRenderbuffer, WebGlShader, WebGlTexture, WebGlVertexArrayObject,
 };
 
 use crate::render;
@@ -153,15 +153,55 @@ impl DrawBuffers {
     }
 }
 
+/* Shout outs to the goats over on stack overflow: https://stackoverflow.com/questions/47934444/webgl-framebuffer-multisampling */
 pub struct PostProcessTarget {
-    pub frame_buffer: WebGlFramebuffer,
+    pub frame_buffer_store: WebGlFramebuffer,
+    pub frame_buffer_draw: WebGlFramebuffer,
+    pub render_buffer: WebGlRenderbuffer,
     pub texture: WebGlTexture,
 }
 
 impl PostProcessTarget {
     pub fn new(context: &WebGl2RenderingContext, width: i32, height: i32) -> PostProcessTarget {
-        let frame_buffer = context.create_framebuffer().unwrap();
-        context.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, Some(&frame_buffer));
+        let max_samples_supported = context
+            .get_parameter(WebGl2RenderingContext::MAX_SAMPLES)
+            .unwrap()
+            .as_f64()
+            .unwrap() as i32;
+
+        console_log!("Max MSAA samples supported: {}", max_samples_supported);
+
+        let samples = max_samples_supported.min(8);
+
+        let frame_buffer_store = context.create_framebuffer().unwrap();
+        context.bind_framebuffer(
+            WebGl2RenderingContext::FRAMEBUFFER,
+            Some(&frame_buffer_store),
+        );
+
+        let render_buffer = context.create_renderbuffer().unwrap();
+        context.bind_renderbuffer(WebGl2RenderingContext::RENDERBUFFER, Some(&render_buffer));
+
+        context.renderbuffer_storage_multisample(
+            WebGl2RenderingContext::RENDERBUFFER,
+            samples,
+            WebGl2RenderingContext::RGBA8,
+            width,
+            height,
+        );
+
+        context.framebuffer_renderbuffer(
+            WebGl2RenderingContext::FRAMEBUFFER,
+            WebGl2RenderingContext::COLOR_ATTACHMENT0,
+            WebGl2RenderingContext::RENDERBUFFER,
+            Some(&render_buffer),
+        );
+
+        let frame_buffer_draw = context.create_framebuffer().unwrap();
+        context.bind_framebuffer(
+            WebGl2RenderingContext::FRAMEBUFFER,
+            Some(&frame_buffer_draw),
+        );
 
         let texture = context.create_texture().unwrap();
         context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, Some(&texture));
@@ -198,11 +238,14 @@ impl PostProcessTarget {
             BASE_LEVEL,
         );
 
+        context.bind_renderbuffer(WebGl2RenderingContext::RENDERBUFFER, None);
         context.bind_texture(WebGl2RenderingContext::TEXTURE_2D, None);
         context.bind_framebuffer(WebGl2RenderingContext::FRAMEBUFFER, None);
 
         PostProcessTarget {
-            frame_buffer,
+            frame_buffer_store,
+            frame_buffer_draw,
+            render_buffer,
             texture,
         }
     }

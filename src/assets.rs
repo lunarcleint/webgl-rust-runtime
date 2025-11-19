@@ -33,8 +33,6 @@ impl Assets {
     }
 
     pub async fn load_image(path: &str) -> Option<Rc<RefCell<Image>>> {
-        console_log!("Loading image: {}", path);
-
         match Assets::check_cache_image(path).await {
             Some(image_pointer) => Some(image_pointer.clone()),
             None => Assets::cache_image(path).await.ok(),
@@ -70,8 +68,6 @@ impl Assets {
         ASSETS.with(|assets| {
             let mut a = assets.borrow_mut();
             a.image_cache.insert(path.to_string(), image_ref.clone());
-
-            console_log!("Cache size: {}", a.image_cache.len());
         });
 
         Ok(image_ref)

@@ -1,6 +1,5 @@
 use crate::app::App;
 use crate::debug::log;
-use crate::render::BASE_VERTEX_SHADER;
 
 use std::cell::RefCell;
 use std::rc::Rc;
@@ -143,7 +142,7 @@ pub const BLOOM_FRAGMENT_SHADER: &str = "#version 300 es
 
     #define brightness 2.
     #define threshold .7
-    #define directions 32.0
+    #define directions 16.0
     #define quality 6.0
     #define size 20.0
 
